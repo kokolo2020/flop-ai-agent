@@ -1,0 +1,13 @@
+# Never commit local runtime data or secrets
+activity.sqlite3
+*.sqlite3
+*.db
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.key
+*.pem

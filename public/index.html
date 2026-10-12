@@ -1,13 +1,62 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FLOP Agent v1.1</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FLOP Agent | V2.0</title>
 <style>
-:root{color-scheme:dark;font-family:system-ui,Arial;background:#0b1020;color:#eef2ff}body{margin:0;padding:24px;max-width:1000px;margin:auto}h1{margin-bottom:5px}.muted{color:#9da9c5}.tag{display:inline-block;background:#392b10;color:#ffcf72;padding:6px 12px;border-radius:20px;font-size:12px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:24px 0}.card{background:#151d33;border:1px solid #2b3551;border-radius:15px;padding:20px}.value{font-size:30px;font-weight:750;margin:10px 0}button{background:#5865f2;color:white;border:0;padding:12px 18px;border-radius:9px;cursor:pointer}input{padding:12px;background:#0b1020;border:1px solid #47516a;border-radius:9px;color:white;max-width:100%;box-sizing:border-box}label{display:block;margin:12px 0 6px}pre{white-space:pre-wrap;overflow-wrap:anywhere}.warning{border-left:3px solid #f7b955;padding-left:12px}</style></head><body>
-<h1>FLOP AI Agent <span class="tag">V1.1 DEMO</span></h1><p class="muted">Static dashboard preview • No blockchain connection</p>
-<p class="warning">This page does not run Python, send inference requests, connect wallets, or generate airdrop rewards. The local Python agent remains a separate command-line program.</p>
-<main><section class="card"><div class="muted">Network</div><div class="value">Offline</div><div class="muted">Simulation only</div></section><section class="card"><div class="muted">Wallet</div><div class="value">Not linked</div><div class="muted">No signing capability</div></section><section class="card"><div class="muted">Eligible FLOP jobs</div><div class="value">0</div><div class="muted">No live activity</div></section></main>
-<section class="card"><h2>Local simulation planner</h2><p class="muted">This interactive calculator is browser-only and does not sync with the Python agent.</p>
-<label for="budget">Daily simulation budget (fictional units)</label><input id="budget" type="number" min="0" step="1" value="10">
-<label for="cost">Simulation units per job</label><input id="cost" type="number" min="1" step="1" value="1">
-<p><button id="calc">Calculate capacity</button></p><pre id="out" aria-live="polite">Up to 10 simulated jobs/day</pre></section>
-<p class="muted">For Python CLI setup, see the repository README. Never enter wallet secrets on this demo page.</p>
-<script>document.getElementById('calc').onclick=()=>{const b=Number(document.getElementById('budget').value),c=Number(document.getElementById('cost').value);document.getElementById('out').textContent=Number.isSafeInteger(b)&&b>=0&&Number.isSafeInteger(c)&&c>0?'Up to '+Math.floor(b/c)+' simulated jobs/day':'Enter valid whole numbers (budget ≥ 0, cost ≥ 1).';}</script></body></html>
+:root{font-family:Inter,system-ui,Arial;color:#e9efff;background:#090e1d;color-scheme:dark}*{box-sizing:border-box}body{margin:0}header{border-bottom:1px solid #263351;background:#111a2c;padding:18px max(18px,calc((100vw - 1100px)/2))}header strong{font-size:23px}header small{display:block;color:#98a9c8;margin-top:4px}.wrap{max-width:1100px;margin:auto;padding:22px 16px 70px}.banner{background:#30250f;border:1px solid #9e7634;color:#ffdf9c;border-radius:12px;padding:14px;margin-bottom:18px;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#151e32;border:1px solid #2d3b59;border-radius:16px;padding:20px;margin-bottom:15px}.label{color:#a6b5d2;font-size:13px}.big{font-size:29px;font-weight:750;margin:9px 0}h2{font-size:19px;margin:0 0 14px}label{display:block;color:#c5d0e7;font-size:14px;margin:12px 0 6px}input,textarea,select{width:100%;background:#0b1223;border:1px solid #455476;border-radius:9px;color:#fff;padding:12px;font:inherit}textarea{min-height:95px;resize:vertical}button{background:#6576ff;border:0;color:white;border-radius:10px;padding:12px 17px;font-weight:700;cursor:pointer}button.secondary{background:#263551}button.danger{background:#643b43}button:disabled{opacity:.4;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}.two{display:grid;grid-template-columns:1.3fr 1fr;gap:15px}.muted{color:#9caecc;font-size:13px;line-height:1.5}.pill{display:inline-block;background:#263351;padding:5px 9px;border-radius:30px;font-size:12px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:11px 8px;text-align:left;border-bottom:1px solid #2b3853;vertical-align:top}td.task{max-width:270px;overflow-wrap:anywhere}.scroll{overflow-x:auto}#notice{min-height:22px;color:#f3d68c}footer{color:#8899b7;font-size:12px;margin-top:24px}@media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.big{font-size:23px}header{padding:18px}td,th{padding:9px 6px}}
+</style></head><body>
+<header><strong>◈ FLOP AI Agent <span class="pill">VERSION 2.0</span></strong><small>Local-first task planner & activity tracker</small></header>
+<div class="wrap">
+<div class="banner"><b>SIMULATION ONLY — NOT CONNECTED TO FLOP.</b> Task submissions below create simulated records, not AI responses, verified inference, blockchain transactions, or airdrop eligibility. Data is stored only in this browser.</div>
+<div class="grid">
+<div class="card"><div class="label">Network</div><div class="big">Offline</div><span class="pill">No API adapter</span></div>
+<div class="card"><div class="label">Wallet</div><div class="big" id="walletStatus">Not linked</div><span class="pill">Public address only</span></div>
+<div class="card"><div class="label">Today's units (UTC)</div><div class="big" id="spent">0 / 10</div><span class="pill">Fictional units</span></div>
+<div class="card"><div class="label">Airdrop eligible jobs</div><div class="big">0</div><span class="pill">No verified activity</span></div>
+</div>
+<div class="two">
+<section class="card"><h2>New simulated task</h2><label for="task">Task description</label><textarea id="task" maxlength="2000" placeholder="e.g. Summarize a public AI research paper"></textarea><div class="actions"><button id="run">Record simulated task</button></div><p id="notice" role="status"></p><p class="muted">No model is called. Every record is clearly marked simulated and ineligible for airdrop credit.</p></section>
+<section class="card"><h2>Settings</h2><label for="wallet">Public wallet address (optional)</label><input id="wallet" maxlength="150" placeholder="Not connected — display only" autocomplete="off"><p class="muted">Never enter seed phrases, private keys, passwords, or API tokens. This field does not validate or connect a wallet.</p><label for="budget">Daily budget (simulation units)</label><input id="budget" type="number" min="0" max="100000" step="1"><label for="cost">Units per task</label><input id="cost" type="number" min="1" max="100000" step="1"><div class="actions"><button id="save">Save settings</button></div></section>
+</div>
+<section class="card"><h2>Local activity log</h2><p class="muted">This history is independent of the Python CLI's SQLite database. It stays on this browser and can be exported or cleared.</p><div class="scroll"><table><thead><tr><th>Time (UTC)</th><th>Task</th><th>Cost</th><th>Result</th></tr></thead><tbody id="history"></tbody></table></div><div class="actions"><button class="secondary" id="export">Export JSON</button><button class="danger" id="clear">Clear history</button></div></section>
+<footer>FLOP Agent v2.0 · Browser-only demo · No claims of FLOP network access or earned rewards</footer>
+</div><script>
+'use strict';
+const KEY='flop-agent-v2-local';
+const defaults=()=>({wallet:'',budget:10,cost:1,jobs:[]});
+let state;
+try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');state=saved&&typeof saved==='object'&&Array.isArray(saved.jobs)?{...defaults(),...saved}:defaults()}catch{state=defaults()}
+const el=id=>document.getElementById(id);
+const utcDay=()=>new Date().toISOString().slice(0,10);
+const todayUsed=()=>state.jobs.filter(j=>typeof j.time==='string'&&j.time.slice(0,10)===utcDay()).reduce((s,j)=>s+(Number(j.cost)||0),0);
+function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
+function validInt(v,min,max){const n=Number(v);return Number.isSafeInteger(n)&&n>=min&&n<=max?n:null}
+function refresh(){
+ el('walletStatus').textContent=state.wallet?'Address saved':'Not linked';
+ el('spent').textContent=todayUsed()+' / '+state.budget;
+ const tbody=el('history');tbody.replaceChildren();
+ for(const j of state.jobs.slice().reverse().slice(0,100)){
+  const tr=document.createElement('tr');
+  for(const val of [j.time,j.task,j.cost,'SIMULATED · not eligible']){
+   const td=document.createElement('td');td.textContent=String(val);if(val===j.task)td.className='task';tr.append(td)
+  }tbody.append(tr)
+ }
+ if(!state.jobs.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='No simulated tasks yet.';tr.append(td);tbody.append(tr)}
+}
+el('wallet').value=state.wallet;el('budget').value=state.budget;el('cost').value=state.cost;
+el('save').onclick=()=>{
+ const budget=validInt(el('budget').value,0,100000),cost=validInt(el('cost').value,1,100000);
+ if(budget===null||cost===null){el('notice').textContent='Enter valid whole-number limits.';return}
+ const wallet=el('wallet').value.trim();
+ if(wallet.length>150){el('notice').textContent='Public address is too long.';return}
+ state.wallet=wallet;state.budget=budget;state.cost=cost;persist();refresh();el('notice').textContent='Settings saved locally. No wallet connected.';
+};
+el('run').onclick=()=>{
+ const task=el('task').value.trim();
+ if(!task||task.length>2000){el('notice').textContent='Enter a task of 1–2000 characters.';return}
+ if(todayUsed()+state.cost>state.budget){el('notice').textContent='Daily simulation budget exceeded. No task recorded.';return}
+ state.jobs.push({id:crypto.randomUUID(),time:new Date().toISOString(),task,cost:state.cost,status:'simulated',eligible:false});
+ persist();refresh();el('task').value='';el('notice').textContent='Simulation recorded. No inference was performed.';
+};
+el('export').onclick=()=>{const blob=new Blob([JSON.stringify({version:'2.0',simulation:true,exportedAt:new Date().toISOString(),...state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flop-agent-simulation.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+el('clear').onclick=()=>{if(confirm('Delete all locally stored task history?')){state.jobs=[];persist();refresh();el('notice').textContent='Local history cleared.'}};
+refresh();
+</script></body></html>

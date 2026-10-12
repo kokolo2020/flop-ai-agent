@@ -1,6 +1,12 @@
 exports.handler = async (event) => {
  const json=(statusCode,obj)=>({statusCode,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(obj)});
  if(event.httpMethod!=='POST')return json(405,{error:'POST required'});
+ const crypto=require('crypto');
+ const access=process.env.AGENT_ACCESS_TOKEN;
+ if(!access || access.length<24)return json(503,{error:'Server access control not configured. Set AGENT_ACCESS_TOKEN (24+ random characters).'});
+ const supplied=event.headers['x-agent-token']||'';
+ const a=Buffer.from(access),b=Buffer.from(String(supplied));
+ if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return json(401,{error:'Invalid agent access token'});
  const key=process.env.OPENAI_API_KEY;
  if(!key)return json(503,{error:'AI provider not configured. Set OPENAI_API_KEY in Netlify environment variables.'});
  let body;try{body=JSON.parse(event.body||'{}')}catch{return json(400,{error:'Invalid JSON'})}

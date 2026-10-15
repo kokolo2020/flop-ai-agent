@@ -1,24 +1,34 @@
+// ComputePilot V3: paid OpenAI inference only. No FLOP network integration.
 exports.handler = async (event) => {
- const json=(statusCode,obj)=>({statusCode,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(obj)});
+ const json=(statusCode,obj)=>({statusCode,headers:{'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff'},body:JSON.stringify(obj)});
  if(event.httpMethod!=='POST')return json(405,{error:'POST required'});
  const crypto=require('crypto');
  const access=process.env.AGENT_ACCESS_TOKEN;
- if(!access || access.length<24)return json(503,{error:'Server access control not configured. Set AGENT_ACCESS_TOKEN (24+ random characters).'});
+ if(!access || access.length<24)return json(503,{error:'Set a private AGENT_ACCESS_TOKEN of at least 24 characters in Netlify.'});
  const supplied=event.headers['x-agent-token']||'';
  const a=Buffer.from(access),b=Buffer.from(String(supplied));
- if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return json(401,{error:'Invalid agent access token'});
+ if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return json(401,{error:'Invalid access token'});
  const key=process.env.OPENAI_API_KEY;
- if(!key)return json(503,{error:'AI provider not configured. Set OPENAI_API_KEY in Netlify environment variables.'});
+ if(!key)return json(503,{error:'OPENAI_API_KEY is not configured.'});
  let body;try{body=JSON.parse(event.body||'{}')}catch{return json(400,{error:'Invalid JSON'})}
- const prompt=body.prompt;
- if(typeof prompt!=='string'||prompt.trim().length<1||prompt.length>2000)return json(400,{error:'Prompt must contain 1–2000 characters'});
+ const prompt=body.prompt, research=body.research===true;
+ if(typeof prompt!=='string'||!prompt.trim()||prompt.length>6000)return json(400,{error:'Prompt must contain 1–6000 characters'});
+ const model=process.env.OPENAI_MODEL||'gpt-4.1-mini';
+ const maxOutput=Math.max(300,Math.min(4000,Number(process.env.MAX_OUTPUT_TOKENS)||4000));
+ const timeoutMs=Math.max(5000,Math.min(60000,Number(process.env.INFERENCE_TIMEOUT_MS)||60000));
+ const input=research?
+ 'Research with live web sources. Clearly distinguish verified findings from estimates and unknowns; include dated source links. Never fabricate real-time prices or FLOP eligibility.\n\nUser request: '+prompt:prompt;
+ const payload={model,input,max_output_tokens:maxOutput,store:false};
+ if(research){payload.tools=[{type:'web_search',search_context_size:'medium'}];payload.tool_choice='required';}
  try{
-  const ctrl=new AbortController();const timeout=setTimeout(()=>ctrl.abort(),20000);
+  const ctrl=new AbortController();const timeout=setTimeout(()=>ctrl.abort(),timeoutMs);
   let response;
-  try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:ctrl.signal,headers:{'authorization':'Bearer '+key,'content-type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-4.1-mini',input:prompt,max_output_tokens:300,store:false})})}finally{clearTimeout(timeout)}
+  try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:ctrl.signal,headers:{authorization:'Bearer '+key,'content-type':'application/json'},body:JSON.stringify(payload)})}finally{clearTimeout(timeout)}
   const data=await response.json();
-  if(!response.ok)return json(502,{error:'Provider request failed',provider_status:response.status});
-  const output=(data.output||[]).flatMap(item=>(item.content||[]).filter(x=>x.type==='output_text').map(x=>x.text)).join('\n');
-  return json(200,{output:output||'No text output returned',provider:'OpenAI',model:data.model,request_id:data.id,usage:data.usage||null,flop_eligible:false});
- }catch(e){return json(502,{error:e.name==='AbortError'?'Provider timed out':'Provider unavailable'})}
+  if(!response.ok)return json(502,{error:'AI provider rejected the request',provider_status:response.status,detail:typeof data.error?.message==='string'?data.error.message.slice(0,280):undefined});
+  const chunks=(data.output||[]).flatMap(item=>(item.content||[]).filter(x=>x.type==='output_text').map(x=>x.text));
+  const citations=(data.output||[]).flatMap(item=>(item.content||[]).flatMap(x=>(x.annotations||[]).filter(a=>a.type==='url_citation').map(a=>({url:a.url,title:a.title||a.url}))));
+  const searchPerformed=(data.output||[]).some(x=>x.type==='web_search_call');
+  return json(200,{output:chunks.join('\n')||'No text returned',provider:'OpenAI',model:data.model||model,request_id:data.id,usage:data.usage||null,incomplete:data.status==='incomplete',incomplete_reason:data.incomplete_details?.reason||null,research_requested:research,web_search_performed:searchPerformed,sources:[...new Map(citations.filter(x=>/^https?:\/\//.test(x.url)).map(x=>[x.url,x])).values()],flop_eligible:false});
+ }catch(e){return json(502,{error:e.name==='AbortError'?'Request timed out; adjust hosting limits or shorten the task':'Provider unavailable'});}
 };

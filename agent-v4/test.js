@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createIdentity,signReceipt,verifyReceipt}=require('./identity');
+const {runDemo}=require('./demo');
+const a=createIdentity(),b=createIdentity();
+const payload={taskId:'t1',value:42};
+const receipt=signReceipt(payload,a.privateKey);
+assert.equal(verifyReceipt(receipt,a.publicKey),true);
+assert.equal(verifyReceipt(receipt,b.publicKey),false);
+receipt.payload.value=43;
+assert.equal(verifyReceipt(receipt,a.publicKey),false);
+const output=runDemo();
+assert.equal(output.signatureValid,true);
+assert.equal(output.resultValid,true);
+assert.equal(output.tamperRejected,true);
+assert.equal(output.flopSettled,false);
+console.log('V4 offline signed-task tests passed');

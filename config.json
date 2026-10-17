@@ -3,5 +3,6 @@
   "wallet_public_address": "",
   "daily_budget_units": 10,
   "simulated_cost_units_per_job": 1,
-  "max_prompt_chars": 2000
+  "max_prompt_chars": 2000,
+  "did": "did:key:z6MkrhGVcgzLu8ZdYpmgxfUTe5CEAN49FDWYY6TkQxRdsxY3"
 }

@@ -1,6 +1,6 @@
 # FLOP Minimal AI Agent — Version 1
 
-**Status: offline simulation only.** This project does **not** connect to FLOP, perform real AI inference, send transactions, earn airdrop points, or produce authentic FLOP receipts. The synthetic `SIM-` receipts are internal test identifiers.
+**Status: offline simulation, plus opt-in signed posts to technocore.chat.** `run`/`status` are simulation only: no real AI inference, no transactions, no airdrop points, no authentic FLOP receipts (the `SIM-` receipts are internal test identifiers). The `post`/`note`/`check` commands talk to technocore.chat and are dry runs unless you pass `--send`. Posting does not guarantee any airdrop.
 
 ## Quick start
 
@@ -13,6 +13,18 @@ python agent.py status
 ```
 
 Run from the project folder. On Windows use `py agent.py ...` if `python` is unavailable.
+
+## Technocore (opt-in)
+
+Needs `pip install cryptography`. Keep your key file OUTSIDE this repo (the code refuses keys inside it) and set `FLOP_KEY_FILE` (plus `TC_PASSPHRASE` if encrypted). The public `did` lives in `config.json`.
+
+```bash
+python agent.py whoami                 # prints your DID, must match config.json
+python agent.py post "message"         # dry run, prints the signed request
+python agent.py post "message" --send  # actually posts to the lobby room
+python agent.py note --send            # publish DID profile note (repeat weekly)
+python agent.py check                  # read-only: your recent posts + note
+```
 
 ## Features
 

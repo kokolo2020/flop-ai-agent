@@ -1,4 +1,4 @@
-"""FLOP Agent v1: offline simulator. No live network or wallet operations."""
+"""FLOP Agent: offline simulator for run/status; opt-in signed Technocore posts (dry-run unless --send)."""
 import argparse
 import hashlib
 import json
@@ -52,16 +52,50 @@ def status():
         recent=c.execute('SELECT id,created,task,status,cost_units,receipt FROM jobs ORDER BY created DESC LIMIT 10').fetchall()
     return {'mode':cfg['mode'],'wallet_public_address':cfg.get('wallet_public_address') or 'NOT CONFIGURED', 'daily_budget_units':cfg['daily_budget_units'],'used_today_units':used,'jobs_total':total,'airdrop_eligible_jobs':0,'recent_jobs':[dict(zip(('id','created','task','status','cost_units','receipt'),r)) for r in recent]}
 
+def _key(args):
+    import technocore
+    path = args.key or os.environ.get('FLOP_KEY_FILE')
+    if not path:
+        raise RuntimeError('Provide --key PATH or set FLOP_KEY_FILE (key must live outside this repo).')
+    key = technocore.load_key(path)
+    did = technocore.did_from_public(technocore.public_raw(key))
+    expected = config().get('did')
+    if expected and did != expected:
+        raise RuntimeError(f'Key derives {did}, which does not match config.json "did". Wrong key file?')
+    return key
+
 def main():
-    p=argparse.ArgumentParser(description='FLOP minimal agent offline simulator')
+    p=argparse.ArgumentParser(description='FLOP minimal agent (offline simulator + opt-in Technocore signed posts)')
     sub=p.add_subparsers(dest='command',required=True)
     sub.add_parser('init')
     r=sub.add_parser('run');r.add_argument('task')
     sub.add_parser('status')
+    for name in ('whoami','post','note'):
+        t=sub.add_parser(name)
+        t.add_argument('--key',help='path to local key file (or set FLOP_KEY_FILE); must be outside the repo')
+        if name!='whoami':
+            t.add_argument('--send',action='store_true',help='actually send; without it you only get a dry run')
+        if name=='post':
+            t.add_argument('text'); t.add_argument('--room',default='lobby')
+        if name=='note':
+            t.add_argument('--value',default=None)
+    c=sub.add_parser('check'); c.add_argument('--room',default='lobby')
     args=p.parse_args()
     init()
     if args.command=='init': result={'initialized':str(DB),'mode':'simulation'}
     elif args.command=='run': result=run(args.task)
+    elif args.command=='whoami':
+        import technocore; k=_key(args); result={'did':technocore.did_from_public(technocore.public_raw(k)),'note_path':technocore.note_path(technocore.did_from_public(technocore.public_raw(k)))}
+    elif args.command=='post':
+        import technocore; result=technocore.post_message(_key(args),args.room,args.text,send=args.send)
+    elif args.command=='note':
+        import technocore; k=_key(args); did=technocore.did_from_public(technocore.public_raw(k))
+        value=args.value or f"agent: flop-ai-agent | key: {did} | role: testnet agent, signed posts via technocore"
+        result=technocore.publish_note(k,value,send=args.send)
+    elif args.command=='check':
+        import technocore; did=config().get('did')
+        if not did: raise RuntimeError('Set "did" (public) in config.json first.')
+        result=technocore.check(did,args.room)
     else: result=status()
     print(json.dumps(result,indent=2))
 if __name__=='__main__': main()

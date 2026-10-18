@@ -8,6 +8,7 @@ exports.handler = async (event) => {
  const supplied=event.headers['x-agent-token']||'';
  const a=Buffer.from(access),b=Buffer.from(String(supplied));
  if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return json(401,{error:'Invalid access token'});
+ if(process.env.COMPUTEPILOT_LIVE_ENABLED!=='true')return json(503,{error:'Live inference is paused for spending safety. Set COMPUTEPILOT_LIVE_ENABLED=true only when you explicitly want paid calls. A daily budget is NOT enforced.'});
  const key=process.env.OPENAI_API_KEY;
  if(!key)return json(503,{error:'OPENAI_API_KEY is not configured.'});
  let body;try{body=JSON.parse(event.body||'{}')}catch{return json(400,{error:'Invalid JSON'})}

@@ -11,11 +11,11 @@ exports.handler = async (event) => {
  const key=process.env.OPENAI_API_KEY;
  if(!key)return json(503,{error:'OPENAI_API_KEY is not configured.'});
  let body;try{body=JSON.parse(event.body||'{}')}catch{return json(400,{error:'Invalid JSON'})}
- const prompt=body.prompt, research=body.research===true;
- if(typeof prompt!=='string'||!prompt.trim()||prompt.length>6000)return json(400,{error:'Prompt must contain 1–6000 characters'});
+ const prompt=body.prompt, research=false;
+ if(typeof prompt!=='string'||!prompt.trim()||prompt.length>2000)return json(400,{error:'Prompt must contain 1–2000 characters'});
  const model=process.env.OPENAI_MODEL||'gpt-4.1-mini';
- const maxOutput=Math.max(300,Math.min(4000,Number(process.env.MAX_OUTPUT_TOKENS)||4000));
- const timeoutMs=Math.max(5000,Math.min(60000,Number(process.env.INFERENCE_TIMEOUT_MS)||60000));
+ const maxOutput=Math.max(100,Math.min(400,Number(process.env.MAX_OUTPUT_TOKENS)||400));
+ const timeoutMs=Math.max(5000,Math.min(20000,Number(process.env.INFERENCE_TIMEOUT_MS)||20000));
  const input=research?
  'Research with live web sources. Clearly distinguish verified findings from estimates and unknowns; include dated source links. Never fabricate real-time prices or FLOP eligibility.\n\nUser request: '+prompt:prompt;
  const payload={model,input,max_output_tokens:maxOutput,store:false};
@@ -29,6 +29,6 @@ exports.handler = async (event) => {
   const chunks=(data.output||[]).flatMap(item=>(item.content||[]).filter(x=>x.type==='output_text').map(x=>x.text));
   const citations=(data.output||[]).flatMap(item=>(item.content||[]).flatMap(x=>(x.annotations||[]).filter(a=>a.type==='url_citation').map(a=>({url:a.url,title:a.title||a.url}))));
   const searchPerformed=(data.output||[]).some(x=>x.type==='web_search_call');
-  return json(200,{output:chunks.join('\n')||'No text returned',provider:'OpenAI',model:data.model||model,request_id:data.id,usage:data.usage||null,incomplete:data.status==='incomplete',incomplete_reason:data.incomplete_details?.reason||null,research_requested:research,web_search_performed:searchPerformed,sources:[...new Map(citations.filter(x=>/^https?:\/\//.test(x.url)).map(x=>[x.url,x])).values()],flop_eligible:false});
+  return json(200,{output:chunks.join('\n')||'No text returned',provider:'OpenAI',model:data.model||model,request_id:data.id,usage:data.usage||null,incomplete:data.status==='incomplete',incomplete_reason:data.incomplete_details?.reason||null,research_requested:research,web_search_performed:searchPerformed,sources:[...new Map(citations.filter(x=>/^https?:\/\//.test(x.url)).map(x=>[x.url,x])).values()],flop_eligible:false,daily_budget_enforced:false,per_request_output_token_limit:maxOutput});
  }catch(e){return json(502,{error:e.name==='AbortError'?'Request timed out; adjust hosting limits or shorten the task':'Provider unavailable'});}
 };

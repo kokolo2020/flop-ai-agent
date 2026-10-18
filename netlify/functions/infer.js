@@ -23,7 +23,7 @@ exports.handler = async (event) => {
  if(!budgetUrl||!budgetKey)return json(503,{error:'V6 paid calls locked: configure private Supabase budget database and credentials first.'});
  const reservationId=crypto.randomUUID();
  try{
-  const budgetResponse=await fetch(budgetUrl.replace(/\\/$/,'')+'/rest/v1/rpc/cp_reserve_budget',{
+  const budgetResponse=await fetch((budgetUrl.endsWith('/')?budgetUrl.slice(0,-1):budgetUrl)+'/rest/v1/rpc/cp_reserve_budget',{
    method:'POST',headers:{'apikey':budgetKey,'authorization':'Bearer '+budgetKey,'content-type':'application/json'},
    body:JSON.stringify({p_id:reservationId,p_cents:10}),signal:AbortSignal.timeout(8000)});
   if(!budgetResponse.ok)return json(503,{error:'Budget database unavailable; paid inference blocked.'});

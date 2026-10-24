@@ -1,0 +1,59 @@
+{
+  "encoding": "computepilot.json.v1",
+  "evidence": "SYNTHETIC_CONTRACT_FIXTURES_ONLY",
+  "vectors": [
+    {
+      "id": "sorted-nested",
+      "value": {
+        "z": [
+          true,
+          null,
+          {
+            "b": 2,
+            "a": 1
+          }
+        ],
+        "a": "hello"
+      },
+      "canonical": "{\"a\":\"hello\",\"z\":[true,null,{\"a\":1,\"b\":2}]}",
+      "sha256": "7347f921d287e9f7e2536452e83d4082587d004fc9023d9144a32df0c6ecc496"
+    },
+    {
+      "id": "numeric-string-keys",
+      "value": {
+        "2": "two",
+        "10": "ten"
+      },
+      "canonical": "{\"10\":\"ten\",\"2\":\"two\"}",
+      "sha256": "b71e124675fc80e7314688bffdb68e83515851fb51474125db9a0c4c8aca3808"
+    },
+    {
+      "id": "unicode-codepoints",
+      "value": {
+        "😀": "face",
+        "": "private-plane",
+        "text": "ไทย café\n"
+      },
+      "canonical": "{\"text\":\"ไทย café\\n\",\"\":\"private-plane\",\"😀\":\"face\"}",
+      "sha256": "6062e9d6c199c100f712cfdcdc4d6c30be1f039a4a58fbd6b4a01665ca497636"
+    },
+    {
+      "id": "safe-integers",
+      "value": {
+        "max": 9007199254740991,
+        "min": -9007199254740991,
+        "zero": 0
+      },
+      "canonical": "{\"max\":9007199254740991,\"min\":-9007199254740991,\"zero\":0}",
+      "sha256": "b7b2401ddca2165824e98c61890c0aaec470258d3119dd265d02be9438bf47e6"
+    },
+    {
+      "id": "escaping",
+      "value": {
+        "s": "quote\" slash\\ tab\t "
+      },
+      "canonical": "{\"s\":\"quote\\\" slash\\\\ tab\\t \"}",
+      "sha256": "ae6e5ba62e7151712ecc567f2f3de60f92db0cd6e194988ccfea8bbeb217a045"
+    }
+  ]
+}

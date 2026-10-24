@@ -1,0 +1,33 @@
+{
+  "schema": "computepilot.operator-plan.v12",
+  "network": "devnet",
+  "expected_genesis_hash": "REPLACE_WITH_OPERATOR_EXPECTED_GENESIS",
+  "expected_runtime": {
+    "spec_name": "REPLACE_WITH_OPERATOR_SPEC_NAME",
+    "spec_version": -1,
+    "transaction_version": -1
+  },
+  "model": {
+    "name": "Qwen/Qwen2.5-0.5B-Instruct",
+    "precision": "BF16",
+    "revision": "REPLACE_WITH_APPROVED_40_HEX_COMMIT",
+    "hash": "REPLACE_WITH_OPERATOR_MODEL_HASH"
+  },
+  "decode_policy_hash": "REPLACE_WITH_OPERATOR_POLICY_HASH",
+  "endpoints": {
+    "rpc": "ws://rpc.flop.invalid",
+    "da": "http://da.flop.invalid:7001",
+    "ghost_mailbox": "http://ghost-mailbox.flop.invalid"
+  },
+  "images": {
+    "worker": "ghcr.io/flop-labs/flop-core/miner-worker@sha256:REPLACE",
+    "backend": "ghcr.io/flop-labs/flop-core/miner-vllm-toploc@sha256:REPLACE"
+  },
+  "artifacts": {
+    "worker_compose": {"path": "docker-compose.miner.yml", "sha256": "REPLACE"},
+    "backend_compose": {"path": "docker-compose.backend.yml", "sha256": "REPLACE"},
+    "env_template": {"path": "miner.env.example", "sha256": "REPLACE"},
+    "decode_policy": {"path": "decode-policy.json", "sha256": "REPLACE"},
+    "release_receipt": {"path": "operator-release.json", "sha256": "REPLACE"}
+  }
+}

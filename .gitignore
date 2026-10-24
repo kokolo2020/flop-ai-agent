@@ -11,3 +11,10 @@ __pycache__/
 venv/
 *.key
 *.pem
+# GPU host evidence and private operator material stay local.
+miner-results/
+miner-private/
+*.seed
+*.age
+*.env
+*.keystore.json

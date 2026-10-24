@@ -1,15 +1,10 @@
 """Offline-first inference, deterministic auditing and tamper-evident receipts."""
 import hashlib
-import json
 import re
 import uuid
 from datetime import datetime, timezone
+from .receipts import SCHEMA, canonical, digest, seal, verify_receipt
 
-SCHEMA = "computepilot.receipt.v5"
-def canonical(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-def digest(value):
-    return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
 def now():
     return datetime.now(timezone.utc).isoformat()
 
@@ -55,11 +50,4 @@ def execute(task, mode="simulation"):
         "audit": report, "execution": "SIMULATED" if mode == "simulation" else "LIVE",
         "flop_settlement": "NOT_VERIFIED", "signature": "NOT_SIGNED",
     }
-    return {"task": task.strip(), "output": result["output"], "receipt": {**record, "record_sha256": digest(record)}}
-
-def verify_receipt(receipt, output):
-    if not isinstance(receipt, dict) or "record_sha256" not in receipt:
-        return False
-    body = {k: v for k, v in receipt.items() if k != "record_sha256"}
-    return (digest(body) == receipt["record_sha256"]
-            and hashlib.sha256(output.encode("utf-8")).hexdigest() == receipt.get("output_sha256"))
+    return {"task": task.strip(), "output": result["output"], "receipt": seal(record)}

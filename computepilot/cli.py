@@ -4,7 +4,7 @@ import json
 from .engine import execute, verify_receipt
 
 def main():
-    p = argparse.ArgumentParser(description="ComputePilot V5.0A offline-first engine")
+    p = argparse.ArgumentParser(description="ComputePilot local receipt engine · V6 encoding, unsigned integrity only")
     p.add_argument("command", choices=["run", "verify"])
     p.add_argument("value", help="Task text for run; JSON receipt file for verify")
     p.add_argument("--output", help="Output text file for receipt verification")

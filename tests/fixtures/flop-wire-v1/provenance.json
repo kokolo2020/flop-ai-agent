@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/flop-labs/yellowpaper",
+  "commit": "70e691c758e53eed17a016a02b0a2ae1200d3744",
+  "path": "evidence/wire-format-v1.json",
+  "sha256": "53440d853f1e595f045ddc6365180e74d0ff366be534dbe823a4bf412e5011de",
+  "license": "CC-BY-4.0",
+  "attribution": "FLOP Labs, FLOP Network Yellow Paper 0.5.0 (draft), 2026. Corpus copied unchanged. ComputePilot encoders are an independent implementation of the documented subset. No FLOP endorsement."
+}

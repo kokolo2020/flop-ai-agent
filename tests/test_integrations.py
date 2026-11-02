@@ -16,6 +16,21 @@ class IntegrationTests(unittest.TestCase):
         self.assertFalse(m.hardware_matches([gpu,gpu], 'a100-80'))
         self.assertFalse(m.hardware_matches([dict(gpu,name='MIG 1g.10gb')], 'a100-80'))
 
+    def test_h100_inventory_requires_exact_card_and_full_memory(self):
+        for target, name, memory in [('h100-pcie','NVIDIA H100 PCIe',81000),
+                                     ('h100-nvl','NVIDIA H100 NVL',95000)]:
+            gpu = {'name':name,'memory.total':memory}
+            self.assertTrue(m.hardware_matches([gpu],target))
+            for rows in [[], [gpu,gpu], [dict(gpu,name='MIG 1g.10gb')],
+                         [dict(gpu,name='NVIDIA H100 80GB HBM3')],
+                         [dict(gpu,**{'memory.total':40000})]]:
+                self.assertFalse(m.hardware_matches(rows,target))
+            other = 'h100-nvl' if target == 'h100-pcie' else 'h100-pcie'
+            self.assertFalse(m.hardware_matches([gpu],other))
+            for invalid in [float('inf'),float('nan'),True,None,'95000']:
+                self.assertFalse(m.hardware_matches([dict(gpu,**{'memory.total':invalid})],target))
+        self.assertFalse(m.hardware_matches([gpu],'unknown'))
+
     def test_dcgm_drops_labels_and_sentinels(self):
         metrics = 'DCGM_FI_DEV_GPU_TEMP{gpu="0",Hostname="PRIVATE",UUID="SECRET"} 40\nDCGM_FI_DEV_FB_FREE{gpu="0"} 9223372036854775794\nDCGM_FI_DEV_POWER_USAGE{gpu="0"} NaN'
         rows = i.parse_dcgm(metrics)

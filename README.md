@@ -6,6 +6,9 @@ connection profiles. Image pins require both a version and digest. See the
 [dated readiness checklist](docs/mining-readiness-2026-11-02.md) and
 [profile instructions](docs/v12-operator-bundle.md#deployment-profiles).
 These checks do not establish operator admission or activate mining.
+For account/template preparation and a first SSH diagnostic, see the
+[Vast.ai VM setup guide](docs/vast-vm-setup.md). H100 PCIe/NVL profiles check
+hardware prerequisites only; they do not certify FLOP compatibility.
 
 ## ComputePilot V12 miner preparation
 

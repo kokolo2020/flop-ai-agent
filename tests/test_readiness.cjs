@@ -1,7 +1,7 @@
 // Synthetic state-machine fixtures; never imported as measured host evidence.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {readiness,validate} = require('../public/miner-readiness.js');
+const {readiness,validate,hardware} = require('../public/miner-readiness.js');
 const now = Date.parse('2026-10-24T00:00:00Z');
 function report() {
   return {schema:'computepilot.miner-test.v12',kind:'preflight',simulated:false,
@@ -26,6 +26,20 @@ test('target selection, SSH and Docker are actual gates',()=>{
   const r=report();r.ssh_access='NOT_TESTED';assert.equal(readiness(r,'a40',now)[1].state,'ACTION_NEEDED');
   r.ssh_access='PASS';r.probes.docker_gpu.status='GPU_INVENTORY_MISMATCH';
   assert.equal(readiness(r,'a40',now)[1].state,'ACTION_NEEDED');
+});
+test('H100 hardware pass never certifies FLOP or activation',()=>{
+  for (const [target,name,memory] of [['h100-pcie','NVIDIA H100 PCIe',81000],['h100-nvl','NVIDIA H100 NVL',95000]]) {
+    const r=report();r.gpus=[{name,'memory.total':memory}];
+    assert.equal(hardware(r.gpus,target),true);
+    const stages=readiness(r,target,now);
+    assert.equal(stages[1].state,'READY');
+    assert.equal(stages[3].state,'BLOCKED');assert.equal(stages[4].state,'BLOCKED');
+    for (const gpus of [[...r.gpus,...r.gpus],[{name:'MIG 1g.10gb','memory.total':10000}],
+                       [{name,'memory.total':40000}],[{name:'NVIDIA H100 80GB HBM3','memory.total':81000}]])
+      assert.equal(hardware(gpus,target),false);
+    for (const invalid of [Infinity,NaN,true,null,'95000'])
+      assert.equal(hardware([{name,'memory.total':invalid}],target),false);
+  }
 });
 test('measured access failure has unreachable state',()=>{
   const r=report();r.probes.docker_server.status='TIMEOUT_OR_OS_ERROR';

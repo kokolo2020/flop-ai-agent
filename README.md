@@ -1,5 +1,15 @@
 # ComputePilot V12 · FLOP miner preparation
 
+**2 November 2026 preparation update:** the offline bundle checker now supports
+same-host or split RunPod backend inventories and tailnet or public-preview
+connection profiles. Image pins require both a version and digest. See the
+[dated readiness checklist](docs/mining-readiness-2026-11-02.md) and
+[profile instructions](docs/v12-operator-bundle.md#deployment-profiles).
+These checks do not establish operator admission or activate mining.
+For account/template preparation and a first SSH diagnostic, see the
+[Vast.ai VM setup guide](docs/vast-vm-setup.md). H100 PCIe/NVL profiles check
+hardware prerequisites only; they do not certify FLOP compatibility.
+
 ## ComputePilot V12 miner preparation
 
 The local branch `computepilot-v12-a40-test` extends the V10.3 application from
@@ -59,10 +69,13 @@ python3 -m computepilot.miner_test ssh-preflight --host a40-authorized \
   --out miner-results/vm-preflight.json
 ```
 
-On the authorized Linux VM, use the operator-approved model revision and a new
-absolute checkpoint directory. The helper requires `uvx` already installed. It
-downloads files but does not launch inference or mining. Its flag records the
-operator's intent; it does not grant authorization by itself.
+For current same-host miner setup, follow the official guide's `flop model fetch` procedure
+with the operator's registered model hash and a fresh checkpoint directory.
+Stop if the fetched bytes do not reproduce the registered root.
+
+The older helper below remains an optional download experiment only. It requires
+`uvx` and an operator-approved revision. It cannot establish the registered root
+or replace the official model-fetch gate, and does not start inference or mining.
 
 ```bash
 bash scripts/download-qwen.sh --authorized-vm APPROVED_40_HEX_REV /opt/flop-miner/models/qwen-test

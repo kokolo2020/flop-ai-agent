@@ -18,7 +18,7 @@
     return r;
   }
   function hardware(gpus, target) {
-    const profiles = {'a40': [/^(NVIDIA )?A40$/i,44000], 'a100-40': [/^(NVIDIA )?A100(-SXM4|-PCIE)?-40GB$/i,37000], 'a100-80': [/^(NVIDIA )?A100(-SXM4|-PCIE)?-80GB$/i,74000]};
+    const profiles = {'a40': [/^(NVIDIA )?A40$/i,44000], 'a100-40': [/^(NVIDIA )?A100(-SXM4|-PCIE)?-40GB$/i,37000], 'a100-80': [/^(NVIDIA )?A100(-SXM4|-PCIE)?-80GB$/i,74000], 'h100-pcie': [/^(NVIDIA )?H100 PCIe$/i,74000], 'h100-nvl': [/^(NVIDIA )?H100 NVL$/i,88000]};
     const profile = profiles[target];
     return !!profile && gpus.length === 1 && profile[0].test(gpus[0].name) && positive(gpus[0]['memory.total']) && gpus[0]['memory.total'] >= profile[1];
   }

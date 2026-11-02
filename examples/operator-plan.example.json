@@ -1,6 +1,10 @@
 {
   "schema": "computepilot.operator-plan.v12",
   "network": "devnet",
+  "deployment": {
+    "topology": "same-host",
+    "network_path": "tailnet"
+  },
   "expected_genesis_hash": "REPLACE_WITH_OPERATOR_EXPECTED_GENESIS",
   "expected_runtime": {
     "spec_name": "REPLACE_WITH_OPERATOR_SPEC_NAME",
@@ -20,8 +24,8 @@
     "ghost_mailbox": "http://ghost-mailbox.flop.invalid"
   },
   "images": {
-    "worker": "ghcr.io/flop-labs/flop-core/miner-worker@sha256:REPLACE",
-    "backend": "ghcr.io/flop-labs/flop-core/miner-vllm-toploc@sha256:REPLACE"
+    "worker": "ghcr.io/flop-labs/flop-core/miner-worker:vX.Y.Z@sha256:REPLACE",
+    "backend": "ghcr.io/flop-labs/flop-core/miner-vllm-toploc:vX.Y.Z@sha256:REPLACE"
   },
   "artifacts": {
     "worker_compose": {"path": "docker-compose.miner.yml", "sha256": "REPLACE"},

@@ -1,4 +1,4 @@
-"""A40 host diagnostics and measured inference only; no miner activation or signing.
+"""GPU host diagnostics and measured inference only; no miner activation or signing.
 
 Standard library only. Run `python3 -m computepilot.miner_test --help`.
 Evidence is operator-collected and unsigned, never a FLOP receipt.
@@ -30,13 +30,20 @@ GPU_PROFILES = {
     "a40": (r"(?:NVIDIA )?A40", 44000),
     "a100-40": (r"(?:NVIDIA )?A100(?:-SXM4|-PCIE)?-40GB", 37000),
     "a100-80": (r"(?:NVIDIA )?A100(?:-SXM4|-PCIE)?-80GB", 74000),
+    "h100-pcie": (r"(?:NVIDIA )?H100 PCIe", 74000),
+    "h100-nvl": (r"(?:NVIDIA )?H100 NVL", 88000),
 }
 
 
 def hardware_matches(gpus, target):
-    pattern, minimum = GPU_PROFILES[target]
+    profile = GPU_PROFILES.get(target)
+    if profile is None or len(gpus) != 1:
+        return False
+    pattern, minimum = profile
     # Whole-host capacity is relevant; never silently ignore additional cards/MIG.
-    return len(gpus) == 1 and bool(re.fullmatch(pattern, gpus[0]['name'], re.I)) and (gpus[0]['memory.total'] or 0) >= minimum
+    name, memory = gpus[0].get('name'), gpus[0].get('memory.total')
+    return (isinstance(name, str) and bool(re.fullmatch(pattern, name, re.I))
+            and type(memory) in (int, float) and math.isfinite(memory) and memory >= minimum)
 
 
 def stamp():

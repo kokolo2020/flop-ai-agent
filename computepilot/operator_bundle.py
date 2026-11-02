@@ -107,7 +107,25 @@ def parse_env(raw):
 
 def image_ref(value, component):
     return isinstance(value, str) and bool(re.fullmatch(
-        r'ghcr\.io/flop-labs/flop-core/' + component + r'(?::[A-Za-z0-9_.-]+)?@sha256:[0-9a-f]{64}', value))
+        r'ghcr\.io/flop-labs/flop-core/' + component + r':v[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}', value))
+
+
+def runpod_origin(value):
+    """Only the documented authenticated Pod proxy, never serverless or a path."""
+    if not endpoint(value, ('https',)):
+        return False
+    url = urlsplit(value)
+    return (bool(re.fullmatch(r'[a-z0-9]+-8000\.proxy\.runpod\.net', url.hostname))
+            and url.port in (None, 443) and url.path == '')
+
+
+def public_host(value):
+    if not isinstance(value, str) or len(value) > 253:
+        return False
+    labels = value.split('.')
+    return (len(labels) >= 2 and not value.lower().endswith('.invalid') and 'replace' not in value.lower()
+            and bool(re.fullmatch(r'[A-Za-z]{2,63}', labels[-1]))
+            and all(re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?', label) for label in labels))
 
 
 def absolute_path(value):
@@ -128,7 +146,7 @@ def endpoint(value, schemes):
         return False
 
 
-def check_bundle(root, manifest_name, expected_manifest_sha256, env_name=None):
+def check_bundle(root, manifest_name, expected_manifest_sha256, env_name=None, backend_env_name=None):
     checks = []
 
     def add(check, good, missing=False):
@@ -162,6 +180,20 @@ def check_bundle(root, manifest_name, expected_manifest_sha256, env_name=None):
         add('preparation_manifest', False)
         return report()
     add('network_is_devnet', plan.get('network') == 'devnet')
+    # Existing V12 manifests describe the original same-host/tailnet topology.
+    deployment = plan.get('deployment', {'topology': 'same-host', 'network_path': 'tailnet'})
+    if not isinstance(deployment, dict):
+        deployment = {}
+    topology, network_path = deployment.get('topology'), deployment.get('network_path')
+    add('deployment_topology', topology in ('same-host', 'runpod-backend'))
+    add('deployment_network_path', network_path in ('tailnet', 'public-preview'))
+    if topology not in ('same-host', 'runpod-backend') or network_path not in ('tailnet', 'public-preview'):
+        return report()
+    split = topology == 'runpod-backend'
+    if split:
+        add('runpod_backend_origin', runpod_origin(deployment.get('backend_origin')))
+    if network_path == 'public-preview':
+        add('public_session_hostname', public_host(deployment.get('session_public_host')))
     genesis = plan.get('expected_genesis_hash')
     add('expected_genesis_supplied', isinstance(genesis, str) and bool(HASH.fullmatch(genesis)) and int(genesis[2:],16) != 0)
     runtime = plan.get('expected_runtime', {})
@@ -180,16 +212,28 @@ def check_bundle(root, manifest_name, expected_manifest_sha256, env_name=None):
         images = {}
     add('worker_image_digest', image_ref(images.get('worker'),'miner-worker'))
     add('backend_image_digest', image_ref(images.get('backend'),'miner-vllm-toploc'))
+    if split:
+        backend_ref = images.get('backend')
+        match = re.search(r':v([0-9]+)\.([0-9]+)\.([0-9]+)@', backend_ref) if isinstance(backend_ref, str) else None
+        add('runpod_backend_download_release', bool(match) and tuple(map(int, match.groups())) >= (0, 1, 237))
     endpoints = plan.get('endpoints', {})
     if not isinstance(endpoints, dict):
         endpoints = {}
     for label, schemes in [('rpc',('ws','wss')),('da',('http','https')),('ghost_mailbox',('http','https'))]:
         add('operator_' + label + '_endpoint_shape', endpoint(endpoints.get(label),schemes))
+    if network_path == 'public-preview':
+        add('public_rpc_uses_tls', endpoint(endpoints.get('rpc'), ('wss',)))
+        add('public_mailbox_uses_tls', endpoint(endpoints.get('ghost_mailbox'), ('https',)))
     artifacts = plan.get('artifacts', {})
     if not isinstance(artifacts, dict):
         artifacts = {}
     policy = None
-    for label in ARTIFACTS:
+    required_artifacts = tuple(a for a in ARTIFACTS if not (split and a == 'backend_compose'))
+    if split:
+        required_artifacts += ('backend_deployment',)
+    if network_path == 'public-preview':
+        required_artifacts += ('tls_compose',)
+    for label in required_artifacts:
         item = artifacts.get(label, {})
         try:
             if not isinstance(item, dict) or not isinstance(item.get('sha256'), str) or not SHA.fullmatch(item['sha256']):
@@ -222,11 +266,21 @@ def check_bundle(root, manifest_name, expected_manifest_sha256, env_name=None):
                 'TOPLOC_PRECISION':'bf16','DECODE_POLICY_HASH':plan.get('decode_policy_hash'),
                 'OPENAI_BASE_URL':'http://backend:8000/v1','SESSION_BIND_IP':'127.0.0.1',
                 'SESSION_HOST_PORT':'8645','OPENROUTER_MODEL_SLUG':'qwen/qwen2.5-0.5b-instruct'}
+    if split:
+        origin = deployment.get('backend_origin')
+        expected['OPENAI_BASE_URL'] = origin + '/v1' if isinstance(origin, str) else None
+    if network_path == 'public-preview':
+        expected['SESSION_PUBLIC_HOST'] = deployment.get('session_public_host')
+    else:
+        add('tailnet_has_no_public_session_host', not env.get('SESSION_PUBLIC_HOST'))
     for key, value in expected.items():
         add('env_' + key, bool(value) and env.get(key) == value)
     for key, label in [('FLOP_RPC','rpc'),('DA_URL','da'),('GHOST_MAILBOX_URL','ghost_mailbox')]:
         add('env_' + key + '_matches_operator', bool(endpoints.get(label)) and env.get(key) == endpoints[label])
-    for key in ['MINER_SIGNER_FILE','MINER_ENCLAVE_KEY_FILE','MODEL_CHECKPOINT_DIR','GHOST_KEY_FILE']:
+    paths = ['MINER_SIGNER_FILE','MINER_ENCLAVE_KEY_FILE','GHOST_KEY_FILE']
+    if not split:
+        paths.append('MODEL_CHECKPOINT_DIR')
+    for key in paths:
         add('env_' + key + '_path', absolute_path(env.get(key)))
     for key in SECRET_FIELDS:
         value = env.get(key, '')
@@ -237,6 +291,32 @@ def check_bundle(root, manifest_name, expected_manifest_sha256, env_name=None):
         add('env_policy_matches_pinned_json', policy is not None and same_json(load_json(env.get('DECODE_POLICY','')),policy))
     except (ValueError, TypeError):
         add('env_policy_matches_pinned_json', False)
+    if split:
+        if not backend_env_name:
+            add('private_backend_env_checked', False, missing=True)
+            return report()
+        try:
+            backend = parse_env(read_file(root, backend_env_name, private=True))
+            add('private_backend_env_readable_and_restricted', True)
+        except FileNotFoundError:
+            add('private_backend_env_readable_and_restricted', False, missing=True)
+            return report()
+        except (OSError, ValueError, TypeError):
+            add('private_backend_env_readable_and_restricted', False)
+            return report()
+        for key, value in {'MODEL_NAME': MODEL, 'MODEL_HASH': model.get('hash'),
+                           'MODEL_REVISION': revision, 'TOPLOC_PRECISION': 'bf16',
+                           'DECODE_POLICY_HASH': plan.get('decode_policy_hash')}.items():
+            add('backend_' + key, bool(value) and backend.get(key) == value)
+        add('backend_MODEL_DIR_path', absolute_path(backend.get('MODEL_DIR')))
+        add('backend_private_token_matches_worker', bool(env.get('INFERENCE_API_KEY')) and
+            backend.get('INFERENCE_API_KEY') == env.get('INFERENCE_API_KEY'))
+        try:
+            add('backend_policy_matches_pinned_json', policy is not None and same_json(load_json(backend.get('DECODE_POLICY','')), policy))
+        except (ValueError, TypeError):
+            add('backend_policy_matches_pinned_json', False)
+    elif backend_env_name:
+        add('backend_env_only_for_split_topology', False)
     return report()
 
 
@@ -246,10 +326,11 @@ def main():
     parser.add_argument('--manifest', default='operator-plan.json', help='Relative to the selected bundle directory')
     parser.add_argument('--expected-manifest-sha256', required=True, help='Pin confirmed separately with the trusted operator')
     parser.add_argument('--env', help='Private env path relative to bundle directory; read only on the host')
+    parser.add_argument('--backend-env', help='Private RunPod backend env path relative to bundle directory')
     parser.add_argument('--out', type=Path)
     args = parser.parse_args()
     try:
-        result = check_bundle(args.directory,args.manifest,args.expected_manifest_sha256,args.env)
+        result = check_bundle(args.directory,args.manifest,args.expected_manifest_sha256,args.env,args.backend_env)
         if args.out:
             write_json(args.out,result)
         else:

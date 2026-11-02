@@ -99,3 +99,22 @@ for approved network/release/model inputs and subsequent evidence. A Vast
 listing, a Docker pass or the presence of an H100 establishes none of those
 gates. Stop provider billing using its termination controls when the agreed test
 ends; stopping a process is not a billing shutdown.
+
+## Local model instruction smoke test
+
+After the Qwen smoke inference has succeeded in the prepared `flop-ai-test`
+container, run from this checkout on the VM:
+
+```bash
+docker exec -i flop-ai-test python - < scripts/agent_readiness.py
+```
+
+The runner uses only cached model files and makes six bounded generation calls:
+fact extraction, arithmetic, evidence interpretation, tool selection, budget
+handling and an untrusted-log case. Proposed actions are printed and never
+executed. It records actual answers, strict typed-JSON checks, completion state,
+per-request time and peak allocated GPU memory in a fresh timestamped
+`/workspace/agent-readiness-*.json` inside the container. Exit 2 means at least one
+prompt check failed. Copy the printed report path out with `docker cp` before
+destroying the disposable VM. Passing this small suite does not demonstrate
+general reliability, a working tool loop or FLOP protocol compatibility.

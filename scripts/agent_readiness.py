@@ -3,7 +3,10 @@
 Run inside the prepared flop-ai-test container. Cached model files only.
 This is a six-case smoke test, not an agent or FLOP protocol certification.
 """
+import argparse
+import hashlib
 import json
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,7 +44,65 @@ def exact_json(answer, expected):
         return False
 
 
+def content_json(answer, expected):
+    """Permit one whole JSON fence, never prose, extra objects or partial JSON."""
+    if not isinstance(answer, str):
+        return False
+    match = re.fullmatch(r'```(?:json)?\s*\n(.*?)\n```', answer.strip(), re.DOTALL)
+    return exact_json(match[1] if match else answer, expected)
+
+
+def score_report(report):
+    expected = {name:value for name,_,value in CASES}
+    if not isinstance(report, dict) or report.get('schema') != 'computepilot.model-smoke.v1':
+        raise ValueError('Expected a saved local smoke report')
+    rows = report.get('rows')
+    if not isinstance(rows, list) or len(rows) != len(expected):
+        raise ValueError('Incomplete cases')
+    scored, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get('case'), str):
+            raise ValueError('Malformed case')
+        name = row['case']
+        if name not in expected or name in seen or not isinstance(row.get('answer'), str) or type(row.get('completed')) is not bool:
+            raise ValueError('Missing, duplicate or malformed case')
+        seen.add(name)
+        raw = row['completed'] and exact_json(row['answer'], expected[name])
+        content = row['completed'] and content_json(row['answer'], expected[name])
+        scored.append({**row, 'passed':raw, 'content_passed':content, 'expected':expected[name]})
+    return {**report, 'rows':scored, 'passed':sum(r['passed'] for r in scored),
+            'content_passed':sum(r['content_passed'] for r in scored), 'total':len(scored)}
+
+
+def rescore_latest():
+    candidates = sorted(p for p in Path('/workspace').glob('agent-readiness-*.json')
+                        if p.is_file() and not p.is_symlink())
+    if not candidates:
+        raise ValueError('No saved model smoke report')
+    source = candidates[-1]
+    if source.stat().st_size > 1_000_000:
+        raise ValueError('Report too large')
+    raw = source.read_bytes()
+    report = score_report(json.loads(raw))
+    report.update(source_sha256=hashlib.sha256(raw).hexdigest(),
+                  rescored_at=datetime.now(timezone.utc).isoformat())
+    # Preserve the original observations. Rescoring never refreshes collected_at.
+    path = Path('/workspace') / ('agent-scored-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ') + '.json')
+    with path.open('x') as stream:
+        json.dump(report,stream,indent=2,allow_nan=False)
+    for row in report['rows']:
+        print(f'{row["case"]}: raw_json={row["passed"]}, content={row["content_passed"]}')
+    print(f'RAW JSON: {report["passed"]}/{report["total"]}')
+    print(f'CONTENT AFTER FENCE HANDLING: {report["content_passed"]}/{report["total"]}')
+    print(f'REPORT: {path} (original unchanged; no inference rerun)')
+    return 0 if report['passed'] == report['total'] else 2
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--rescore-latest', action='store_true', help='Rescore the latest saved report without importing the model')
+    if parser.parse_args().rescore_latest:
+        return rescore_latest()
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     if not torch.cuda.is_available():
@@ -83,10 +144,12 @@ def main():
                   passed=passed, total=len(rows), rows=rows,
                   scope='Six local prompt checks only; no tool execution or end-to-end agent evaluation',
                   flop_activity='NOT_VERIFIED', mining_activation='NOT_PERFORMED')
+    report = score_report(report)
     path = Path('/workspace') / ('agent-readiness-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ') + '.json')
     with path.open('x') as stream:
         json.dump(report,stream,indent=2,allow_nan=False)
     print(f'RESULT: {passed}/{len(rows)} prompt checks passed. This is not full agent readiness.')
+    print(f'CONTENT AFTER FENCE HANDLING: {report["content_passed"]}/{len(rows)}')
     print(f'REPORT: {path}')
     return 0 if passed == len(rows) else 2
 

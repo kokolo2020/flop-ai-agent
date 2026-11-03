@@ -52,7 +52,10 @@ The 85 C temperature and 95% allocation rules are heuristics inherited from the
 monitoring tools. High memory allocation does not alone prove an out-of-memory
 error; manufacturer temperature limits and workload context still matter.
 Raw logs and arbitrary extra report fields are ignored. No model inference is
-performed, and model/tool selection remains future integration work.
+performed by this deterministic module. The optional
+[bounded assistant workflow](agent-workflow.md) now uses its sanitized output
+for a single FLOP assessment, validation and private history. Autonomous tool
+selection remains future integration work.
 
 ## Validation and next live trial
 

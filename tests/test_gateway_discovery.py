@@ -35,6 +35,7 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(req.get_method(), 'GET')
         self.assertIsNone(req.data)
         self.assertFalse(req.has_header('Authorization'))
+        self.assertEqual(req.get_header('User-agent'), g.USER_AGENT)
         self.assertEqual(opener.open.call_count, 1)
         self.assertEqual(opener.open.call_args.kwargs, {'timeout': 10})
         response.read.assert_called_once_with(g.MAX_BYTES + 1)

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from urllib import error, request
 
 MODELS_URL = 'https://api.flop.network/v1/models'
+USER_AGENT = 'ComputePilot/0.12 (FLOP diagnostic client)'
 MAX_BYTES = 1_048_576
 
 
@@ -59,7 +60,7 @@ def discover_models():
         'rewards': 'NOT_VERIFIED',
         'scope': 'Public model discovery only; no API key, inference or chain transaction',
     }
-    req = request.Request(MODELS_URL, headers={'Accept': 'application/json'}, method='GET')
+    req = request.Request(MODELS_URL, headers={'Accept': 'application/json', 'User-Agent': USER_AGENT}, method='GET')
     try:
         # No redirects, retries, caller-selected host, API key or paid POST path.
         with request.build_opener(NoRedirect()).open(req, timeout=10) as response:

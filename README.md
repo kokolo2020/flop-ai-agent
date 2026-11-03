@@ -1,5 +1,15 @@
 # ComputePilot V12 · FLOP miner preparation
 
+**4 November 2026 agent workflow:** `python3 -m computepilot.agent_workflow network`
+checks FLOP's public model catalog and saves private history without a GPU. The
+optional single-request assessment requires an explicitly enabled scoped API
+credential; output format and consistency are validated before acceptance.
+GPU preflight reports can also be inspected or explained. See the
+[workflow and credential instructions](docs/agent-workflow.md) and
+[live access observations](docs/agent-live-check-2026-11-04.md).
+The official enrollment attempt hit the faucet's daily cap; authenticated
+inference remains unverified. No new rental or miner activation was performed.
+
 **Diagnostic tool layer:** `python3 -m computepilot.diagnose` now reads preflight
 reports, recommends investigation and compares fresh before/after observations.
 This is deterministic diagnostic tooling; it does not run an LLM, execute repairs
@@ -9,7 +19,8 @@ or activate mining. See the [workflow and limits](docs/diagnostic-loop.md).
 for a read-only public model-list check. Listing, inference, mining and rewards are
 reported separately. No key or paid request is sent. See the
 [discovery instructions and limitations](docs/gateway-discovery-2026-11-03.md).
-Live gateway access remains unverified in this development session.
+For later live observations, see the dated agent check log above. A listed model
+does not establish a completed inference request.
 
 **2 November 2026 preparation update:** the offline bundle checker now supports
 same-host or split RunPod backend inventories and tailnet or public-preview

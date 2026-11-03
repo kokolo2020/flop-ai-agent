@@ -1,5 +1,11 @@
 # ComputePilot V12 · FLOP miner preparation
 
+**3 November 2026 gateway discovery:** run `python3 -m computepilot.gateway_discovery`
+for a read-only public model-list check. Listing, inference, mining and rewards are
+reported separately. No key or paid request is sent. See the
+[discovery instructions and limitations](docs/gateway-discovery-2026-11-03.md).
+Live gateway access remains unverified in this development session.
+
 **2 November 2026 preparation update:** the offline bundle checker now supports
 same-host or split RunPod backend inventories and tailnet or public-preview
 connection profiles. Image pins require both a version and digest. See the

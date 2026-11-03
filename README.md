@@ -1,5 +1,10 @@
 # ComputePilot V12 · FLOP miner preparation
 
+**Diagnostic tool layer:** `python3 -m computepilot.diagnose` now reads preflight
+reports, recommends investigation and compares fresh before/after observations.
+This is deterministic diagnostic tooling; it does not run an LLM, execute repairs
+or activate mining. See the [workflow and limits](docs/diagnostic-loop.md).
+
 **3 November 2026 gateway discovery:** run `python3 -m computepilot.gateway_discovery`
 for a read-only public model-list check. Listing, inference, mining and rewards are
 reported separately. No key or paid request is sent. See the

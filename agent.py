@@ -80,6 +80,7 @@ def main():
         if name=='note':
             t.add_argument('--value',default=None)
     c=sub.add_parser('check'); c.add_argument('--room',default='lobby')
+    sub.add_parser('devnet-models',help='read-only: list models served on FLOP devnet (no keys, no spending)')
     args=p.parse_args()
     init()
     if args.command=='init': result={'initialized':str(DB),'mode':'simulation'}
@@ -92,6 +93,8 @@ def main():
         import technocore; k=_key(args); did=technocore.did_from_public(technocore.public_raw(k))
         value=args.value or f"agent: flop-ai-agent | key: {did} | role: testnet agent, signed posts via technocore"
         result=technocore.publish_note(k,value,send=args.send)
+    elif args.command=='devnet-models':
+        import devnet; result=devnet.models()
     elif args.command=='check':
         import technocore; did=config().get('did')
         if not did: raise RuntimeError('Set "did" (public) in config.json first.')

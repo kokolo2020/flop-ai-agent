@@ -26,6 +26,14 @@ python agent.py note --send            # publish DID profile note (repeat weekly
 python agent.py check                  # read-only: your recent posts + note
 ```
 
+## Devnet (read-only)
+
+```bash
+python agent.py devnet-models   # GET https://api.flop.network/v1/models
+```
+
+Public GET only: no keys, no signing, no spending. Devnet has no rewards, so this earns nothing. Paid inference sessions are still not implemented because the public docs do not yet give a verified call sequence.
+
 ## Features
 
 - Offline adapter with explicitly simulated outputs
